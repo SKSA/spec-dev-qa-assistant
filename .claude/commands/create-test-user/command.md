@@ -188,7 +188,7 @@ FIXTURE_PATH="${SAVE_TO:-app/fixtures/generated/test-users-${MARKET,,}.json}"
 DATE_STAMP=$(date +%Y%m%d)
 TIME_STAMP=$(date +%H%M%S)
 EMAIL="test-user-${DATE_STAMP}-${TIME_STAMP}@hellofresh.com"
-PASSWORD="qwerty"
+PASSWORD="qwerty123"
 FIRST_NAME="Test"
 LAST_NAME="User"
 
