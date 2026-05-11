@@ -116,8 +116,10 @@ STAGING_PASSWORD="qwerty123"
 
 echo "🔐 Authenticating with staging credentials..."
 
+MARKET_LOWER=$(echo "$MARKET" | tr '[:upper:]' '[:lower:]')
+
 LOGIN_AUTH_RESPONSE=$(curl -s --max-time 10 -X POST \
-  "https://www-staging.hellofresh.com/gw/login?country=${MARKET,,}" \
+  "https://www-staging.hellofresh.com/gw/login?country=${MARKET_LOWER}" \
   -H 'content-type: application/json' \
   -d "{\"username\":\"${STAGING_USERNAME}\",\"password\":\"${STAGING_PASSWORD}\"}")
 
@@ -178,17 +180,17 @@ MEALS=$(echo "$PLAN" | cut -d'-' -f1)
 PEOPLE=$(echo "$PLAN" | cut -d'-' -f3)
 
 # Set fixture path
-FIXTURE_PATH="${SAVE_TO:-app/fixtures/generated/test-users-${MARKET,,}.json}"
+FIXTURE_PATH="${SAVE_TO:-app/fixtures/generated/test-users-${MARKET_LOWER}.json}"
 ```
 
 ### Step 2: Generate User Credentials
 
 ```bash
-# Generate unique email with date and time format (DD-HHMMSS)
-DAY_STAMP=$(date +%d)
+# Generate unique email with date and time format (YYYYMMDD-HHMMSS)
+DATE_STAMP=$(date +%Y%m%d)
 TIME_STAMP=$(date +%H%M%S)
-EMAIL="hfuser-${DAY_STAMP}-${TIME_STAMP}@hellofresh.com"
-PASSWORD="qwerty123"
+EMAIL="test-user-${DATE_STAMP}-${TIME_STAMP}@hellofresh.com"
+PASSWORD="qwerty"
 FIRST_NAME="Test"
 LAST_NAME="User"
 
@@ -493,7 +495,7 @@ else
           "https://www-staging.hellofresh.com/gw/order/legacy/process" \
           -H "Authorization: Bearer ${ACCESS_TOKEN}" \
           -H 'content-type: application/json' \
-          -d "{\"cartID\":\"${CART_ID}\",\"customerEmail\":\"${EMAIL}\",\"hfPublicId\":\"${HF_PUBLIC_ID}\",\"useSameAddressForBilling\":true,\"personal\":{\"firstName\":\"${FIRST_NAME}\",\"lastName\":\"${LAST_NAME}\"},${PAYMENT_JSON},\"address\":{\"address1\":\"${ADDRESS_LINE1}\",\"city\":\"${ADDRESS_CITY}\",\"postcode\":\"${ADDRESS_ZIP}\",\"region\":\"${ADDRESS_REGION}\",\"firstName\":\"${FIRST_NAME}\",\"lastName\":\"${LAST_NAME}\",\"phone\":\"+1234567890\",\"customerId\":\"${CUSTOMER_ID}\",\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"selectedAddress\":{\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"billingAddress\":{\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"deliveryMoments\":{\"${TIMESTAMP_MS}\":{\"deliveryTime\":\"${DELIVERY_OPTION}\",\"firstDelivery\":\"${DELIVERY_DATE}\",\"sku\":\"${SKU}\"}},\"subscription\":{\"delivery_time\":\"\",\"delivery_weekday\":${DELIVERY_DAY}},\"project\":\"HF\",\"country\":\"${MARKET,,}\",\"forwardURL\":\"https://www-staging.hellofresh.com/checkout-api/finish/placeorder/\",\"customerId\":\"${CUSTOMER_ID}\",\"couponCode\":null,\"freeAddOn\":false}")
+          -d "{\"cartID\":\"${CART_ID}\",\"customerEmail\":\"${EMAIL}\",\"hfPublicId\":\"${HF_PUBLIC_ID}\",\"useSameAddressForBilling\":true,\"personal\":{\"firstName\":\"${FIRST_NAME}\",\"lastName\":\"${LAST_NAME}\"},${PAYMENT_JSON},\"address\":{\"address1\":\"${ADDRESS_LINE1}\",\"city\":\"${ADDRESS_CITY}\",\"postcode\":\"${ADDRESS_ZIP}\",\"region\":\"${ADDRESS_REGION}\",\"firstName\":\"${FIRST_NAME}\",\"lastName\":\"${LAST_NAME}\",\"phone\":\"+1234567890\",\"customerId\":\"${CUSTOMER_ID}\",\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"selectedAddress\":{\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"billingAddress\":{\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"deliveryMoments\":{\"${TIMESTAMP_MS}\":{\"deliveryTime\":\"${DELIVERY_OPTION}\",\"firstDelivery\":\"${DELIVERY_DATE}\",\"sku\":\"${SKU}\"}},\"subscription\":{\"delivery_time\":\"\",\"delivery_weekday\":${DELIVERY_DAY}},\"project\":\"HF\",\"country\":\"${MARKET_LOWER}\",\"forwardURL\":\"https://www-staging.hellofresh.com/checkout-api/finish/placeorder/\",\"customerId\":\"${CUSTOMER_ID}\",\"couponCode\":null,\"freeAddOn\":false}")
         
         # Check for errors and classify them
         if echo "$CHECKOUT_RESPONSE" | grep -q '"code":9904'; then
