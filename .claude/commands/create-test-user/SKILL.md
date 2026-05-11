@@ -4,15 +4,16 @@ description: Create US test users in staging environment with auto-authenticatio
 argument-hint: '[--state new] [--plan 2-meals-2-people] [--loyalty-tier gold]'
 ---
 
-# Create Test User
+# Create Test User - EXECUTABLE SKILL
 
-Create test users in staging environment using direct backend API calls with automatic authentication. Currently supports US market only.
+This skill uses the **proven working script** from `command.md` as the executable implementation.
 
-**⚠️ Important:** Requires VPN connection to HelloFresh staging environment.
+## How This Works
 
-## Overview
-
-This skill creates test user accounts in the staging environment with optional subscriptions. It handles authentication, user creation, subscription setup, and state management automatically.
+This SKILL.md acts as an orchestrator that:
+1. Reads the complete, tested bash script from `command.md`
+2. Executes it as-is (no interpretation or reconstruction)
+3. The script is modular internally but executes as one reliable unit
 
 ## Usage
 
@@ -30,84 +31,73 @@ This skill creates test user accounts in the staging environment with optional s
 /create-test-user --state active --loyalty-tier gold
 ```
 
-## Workflow
+## Execution Strategy
 
-### 1. Input Validation
-See `validation/input-validator.md` for:
-- Parse and validate state parameter (new, active, cancelled, paused)
-- Parse plan configuration (meals-people format)
-- Validate loyalty tier if provided
+**IMPORTANT:** Execute the complete working script from `command.md`.
 
-### 2. Authentication
-See `auth/token-generator.md` for:
-- Auto-generate bearer token from staging credentials
-- Validate token and handle auth failures
-- Set market to US
+The script contains:
+1. ✅ Setup and JSON parser detection
+2. ✅ Authentication with staging credentials
+3. ✅ Input validation (state, plan, loyalty tier)
+4. ✅ User account creation with retry logic
+5. ✅ Cart creation and delivery slot fetching (parallel)
+6. ✅ Checkout with proper payment methods
+7. ✅ Subscription polling with timeout
+8. ✅ State management (cancel/pause)
+9. ✅ Result formatting and display
 
-### 3. User Creation
-See `user/account-creator.md` for:
+## How to Execute
+
+Read and execute the bash code blocks from `command.md` in this order:
+
+### Step 1: Setup (lines 74-132)
+- Detect JSON parser (jq or python3)
+- Show VPN warning
+- Authenticate with staging credentials
+- Get bearer token
+
+### Step 2: Validation (lines 143-158)  
+- Hardcode MARKET="US"
+- Validate state parameter
+- Parse plan into meals/people
+
+### Step 3: Generate Credentials (lines 162-200)
 - Generate unique email with timestamp
-- Create user account via signup API
-- Extract customer ID and access token
+- Set password, first/last name
+- Get business division
 
-### 4. Subscription Management (if state != 'new')
-See `subscription/subscription-manager.md` for:
-- Create cart with meal preferences
-- Complete checkout with test payment
-- Handle state changes (cancel/pause)
-- Enroll in loyalty program if requested
+### Step 4: Create User (lines 207-268)
+- Create customer with retry logic
+- Login to get user-specific access token
 
-### 5. Output
-See `output/result-formatter.md` for:
-- Display user credentials
-- Show subscription details
-- Print success summary
+### Step 5: Create Subscription if needed (lines 304-575)
+- Skip if state="new"
+- Get SKU and address
+- Create cart and fetch delivery slots (parallel)
+- Complete checkout with payment
+- Poll for subscription
+- Handle cancel/pause state changes
 
-## Modules
+### Step 6: Display Results (lines 590-625)
+- Format success message
+- Show credentials
+- Show subscription details if applicable
 
-### Validation
-Input validation modules:
-- `validation/input-validator.md` - Validate user input parameters
+## Helper Functions (lines 639-871)
 
-### Authentication
-Token management modules:
-- `auth/token-generator.md` - Generate bearer tokens from credentials
+The script includes these tested helper functions:
+- `get_business_division()` - Returns brand for market
+- `get_plan_sku()` - Generates SKU from market/meals/people
+- `get_test_address()` - Returns test address for market (US only currently)
+- `get_payment_method_config()` - Returns payment method (Braintree for US)
 
-### User Management
-User creation modules:
-- `user/account-creator.md` - Create user accounts
-- `user/credential-generator.md` - Generate unique credentials
+## Key Success Factors
 
-### Subscription
-Subscription management modules:
-- `subscription/subscription-manager.md` - Manage subscription lifecycle
-- `subscription/payment-handler.md` - Handle test payments
-- `subscription/state-manager.md` - Handle state transitions
-
-### Output
-Result display modules:
-- `output/result-formatter.md` - Format and display results
-
-## User States
-
-**`new` (Default - Recommended)** ⭐
-- Account only, no subscription
-- 100% success rate
-- Fast (~5-10 seconds)
-- Use for most E2E tests
-
-**`active`**
-- Full subscription with active state
-- Uses test payment methods
-- Slower (~20-30 seconds)
-
-**`cancelled`**
-- Creates subscription then cancels it
-- For testing cancellation flows
-
-**`paused`**
-- Creates subscription then pauses it
-- For testing pause flows
+1. **Uses exact working API endpoints** from successful runs
+2. **Parallel cart + delivery fetch** for speed
+3. **Retry logic** for transient errors
+4. **Proper subscription polling** with timeout
+5. **Official Braintree test nonce** (`fake-valid-nonce`)
 
 ## Output
 
@@ -126,16 +116,13 @@ Result display modules:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-## Dependencies
+## Documentation Modules
 
-- curl (HTTP requests)
-- jq or python3 (JSON parsing)
-- VPN connection to staging
+The modular documentation files in subdirectories explain each part:
+- `validation/` - Input validation logic
+- `auth/` - Authentication process
+- `user/` - User creation process
+- `subscription/` - Subscription lifecycle
+- `output/` - Result formatting
 
-## Notes
-
-- Uses hardcoded staging credentials for auto-authentication
-- Generates unique emails using timestamp
-- Uses official Braintree sandbox test nonces
-- Only supports US market currently
-- Test payment methods work in staging environment
+**These are for reference only.** The executable code is in `command.md`.
