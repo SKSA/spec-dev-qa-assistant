@@ -184,9 +184,10 @@ FIXTURE_PATH="${SAVE_TO:-app/fixtures/generated/test-users-${MARKET,,}.json}"
 ### Step 2: Generate User Credentials
 
 ```bash
-# Generate unique email with timestamp
-TIMESTAMP=$(date +%s)
-EMAIL="test-user-${TIMESTAMP}@hellofresh.com"
+# Generate unique email with date and time format (YYYYMMDD-HHMMSS)
+DATE_STAMP=$(date +%Y%m%d)
+TIME_STAMP=$(date +%H%M%S)
+EMAIL="test-user-${DATE_STAMP}-${TIME_STAMP}@hellofresh.com"
 PASSWORD="qwerty"
 FIRST_NAME="Test"
 LAST_NAME="User"
