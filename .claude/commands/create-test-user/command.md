@@ -324,7 +324,7 @@ else
   ADDRESS_REGION=""
   
   if [[ "$JSON_PARSER" == "jq" ]]; then
-    read -r ADDRESS_LINE1 ADDRESS_CITY ADDRESS_ZIP ADDRESS_REGION <<< "$(echo "$ADDRESS_JSON" | jq -r '[.line1, .city, (.zip // .postcode // .eircode), (.region // .state // "")] | @tsv')"
+    IFS=$'\t' read -r ADDRESS_LINE1 ADDRESS_CITY ADDRESS_ZIP ADDRESS_REGION <<< "$(echo "$ADDRESS_JSON" | jq -r '[.line1, .city, (.zip // .postcode // .eircode), (.region // .state // "")] | @tsv')"
   else
     ADDRESS_LINE1=$(echo "$ADDRESS_JSON" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('line1', ''))")
     ADDRESS_CITY=$(echo "$ADDRESS_JSON" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('city', ''))")
@@ -426,11 +426,11 @@ else
     
     if [[ "$JSON_PARSER" == "jq" ]]; then
       # Filter for available slots: availableOnCheckout=true and status=RUNNING
-      read -r DELIVERY_DATE DELIVERY_OPTION DELIVERY_DAY <<< "$(echo "$DELIVERY_RESPONSE" | jq -r '
-        .items[]? 
-        | select(.deliveryDate.deliveryOption.availableOnCheckout == true) 
+      IFS=$'\t' read -r DELIVERY_DATE DELIVERY_OPTION DELIVERY_DAY <<< "$(echo "$DELIVERY_RESPONSE" | jq -r '
+        .items[]?
+        | select(.deliveryDate.deliveryOption.availableOnCheckout != false)
         | select(.deliveryDate.status == "RUNNING" or .deliveryDate.status == null)
-        | [.deliveryDate.deliveryDate, .deliveryDate.deliveryOption.handle, .deliveryDate.deliveryOption.deliveryDay] 
+        | [.deliveryDate.deliveryDate, .deliveryDate.deliveryOption.handle, (.deliveryDate.deliveryOption.deliveryDay | tostring)]
         | @tsv
       ' | head -1)"
     else
@@ -468,29 +468,15 @@ for item in data.get('items', []):
       echo "✅ Generated HFPublicID: $HF_PUBLIC_ID"
       
       # Build payment JSON based on market
+      # NOTE: Use if/elif/else - chained && || incorrectly sets last branch even when first matches
+      # NOTE: Use tr for lowercase - ${VAR,,} requires bash 4+ and fails in zsh
+      MARKET_LOWER=$(echo "$MARKET" | tr '[:upper:]' '[:lower:]')
       if [[ "$PAYMENT_METHOD" == "Braintree_CreditCard" ]]; then
-        PAYMENT_JSON='"payment": {
-            "method": "Braintree_CreditCard",
-            "paymentMethodNonce": "fake-valid-nonce"
-          }'
+        PAYMENT_JSON='"payment":{"method":"Braintree_CreditCard","paymentMethodNonce":"fake-valid-nonce"}'
       elif [[ "$PAYMENT_METHOD" == "ProcessOut_CreditCard" ]]; then
-        PAYMENT_JSON='"payment": {
-            "method": "ProcessOut_CreditCard",
-            "card_id": "card_test_4242424242424242"
-          }'
+        PAYMENT_JSON='"payment":{"method":"ProcessOut_CreditCard","card_id":"card_test_4242424242424242"}'
       else
-        PAYMENT_JSON='"payment": {
-            "method": "Adyen_CreditCard",
-            "shouldSendExtra3DSParms": false,
-            "checkout_integration": true,
-            "payment_details": {
-              "type": "scheme",
-              "encryptedCardNumber": "test_4111111111111111",
-              "encryptedExpiryYear": "test_2030",
-              "encryptedExpiryMonth": "test_03",
-              "encryptedSecurityCode": "test_737"
-            }
-          }'
+        PAYMENT_JSON='"payment":{"method":"Adyen_CreditCard","shouldSendExtra3DSParms":false,"checkout_integration":true,"payment_details":{"type":"scheme","encryptedCardNumber":"test_4111111111111111","encryptedExpiryYear":"test_2030","encryptedExpiryMonth":"test_03","encryptedSecurityCode":"test_737"}}'
       fi
       
       # Step 4c: Checkout with retry logic (retries checkout only, not full flow)
@@ -529,7 +515,7 @@ for item in data.get('items', []):
           "https://www-staging.hellofresh.com/gw/order/legacy/process" \
           -H "Authorization: Bearer ${ACCESS_TOKEN}" \
           -H 'content-type: application/json' \
-          -d "{\"cartID\":\"${CART_ID}\",\"customerEmail\":\"${EMAIL}\",\"hfPublicId\":\"${HF_PUBLIC_ID}\",\"useSameAddressForBilling\":true,\"personal\":{\"firstName\":\"${FIRST_NAME}\",\"lastName\":\"${LAST_NAME}\"},${PAYMENT_JSON},\"address\":{\"address1\":\"${ADDRESS_LINE1}\",\"city\":\"${ADDRESS_CITY}\",\"postcode\":\"${ADDRESS_ZIP}\",\"region\":\"${ADDRESS_REGION}\",\"firstName\":\"${FIRST_NAME}\",\"lastName\":\"${LAST_NAME}\",\"phone\":\"+1234567890\",\"customerId\":\"${CUSTOMER_ID}\",\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"selectedAddress\":{\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"billingAddress\":{\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"deliveryMoments\":{\"${TIMESTAMP_MS}\":{\"deliveryTime\":\"${DELIVERY_OPTION}\",\"firstDelivery\":\"${DELIVERY_DATE}\",\"sku\":\"${SKU}\"}},\"subscription\":{\"delivery_time\":\"\",\"delivery_weekday\":${DELIVERY_DAY}},\"project\":\"HF\",\"country\":\"${MARKET,,}\",\"forwardURL\":\"https://www-staging.hellofresh.com/checkout-api/finish/placeorder/\",\"customerId\":\"${CUSTOMER_ID}\",\"couponCode\":null,\"freeAddOn\":false}")
+          -d "{\"cartID\":\"${CART_ID}\",\"customerEmail\":\"${EMAIL}\",\"hfPublicId\":\"${HF_PUBLIC_ID}\",\"useSameAddressForBilling\":true,\"personal\":{\"firstName\":\"${FIRST_NAME}\",\"lastName\":\"${LAST_NAME}\"},${PAYMENT_JSON},\"address\":{\"address1\":\"${ADDRESS_LINE1}\",\"city\":\"${ADDRESS_CITY}\",\"postcode\":\"${ADDRESS_ZIP}\",\"region\":\"${ADDRESS_REGION}\",\"firstName\":\"${FIRST_NAME}\",\"lastName\":\"${LAST_NAME}\",\"phone\":\"+1234567890\",\"customerId\":\"${CUSTOMER_ID}\",\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"selectedAddress\":{\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"billingAddress\":{\"isBilling\":true,\"isOffice\":false,\"billToSameAddress\":true,\"isDefaultBilling\":false,\"isDefaultShipping\":false},\"deliveryMoments\":{\"${TIMESTAMP_MS}\":{\"deliveryTime\":\"${DELIVERY_OPTION}\",\"firstDelivery\":\"${DELIVERY_DATE}\",\"sku\":\"${SKU}\"}},\"subscription\":{\"delivery_time\":\"\",\"delivery_weekday\":${DELIVERY_DAY}},\"project\":\"HF\",\"country\":\"${MARKET_LOWER}\",\"forwardURL\":\"https://www-staging.hellofresh.com/checkout-api/finish/placeorder/\",\"customerId\":\"${CUSTOMER_ID}\",\"couponCode\":null,\"freeAddOn\":false}")
         
         # Check for errors and classify them
         if echo "$CHECKOUT_RESPONSE" | grep -q '"code":9904'; then
@@ -537,6 +523,17 @@ for item in data.get('items', []):
           echo "❌ Checkout validation error (9904) - check payload"
           echo "Response: ${CHECKOUT_RESPONSE:0:500}"
           break
+        elif echo "$CHECKOUT_RESPONSE" | grep -q '"code":9927'; then
+          # 9927 = transient "Checkout failed" - retryable
+          if [[ $CHECKOUT_ATTEMPT -le $MAX_CHECKOUT_RETRIES ]]; then
+            echo "⚠️  9927 checkout failed (transient), retrying..."
+            sleep 2
+            continue
+          else
+            echo "❌ 9927 checkout failed after $((MAX_CHECKOUT_RETRIES + 1)) attempts"
+            echo "Response: ${CHECKOUT_RESPONSE:0:300}"
+            break
+          fi
         elif echo "$CHECKOUT_RESPONSE" | grep -q "profile-service"; then
           # Profile-service error - retryable
           if [[ $CHECKOUT_ATTEMPT -le $MAX_CHECKOUT_RETRIES ]]; then
