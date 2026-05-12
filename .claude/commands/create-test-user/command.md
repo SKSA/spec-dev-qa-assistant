@@ -347,10 +347,10 @@ else
     -d "{\"items\":[{\"sku\":\"${SKU}\",\"quantity\":1,\"metadata\":{\"mealsPreset\":\"chefschoice\",\"timestamp\":${TIMESTAMP_MS},\"productFamily\":\"classic\"}}],\"country\":\"${MARKET}\"}" > "$CART_TMP" &
   CART_PID=$!
   
-  # Fetch delivery slots with correct parameters (family instead of product)
-  # Using family=classic-box-t6 for US market as per Confluence docs
+  # Fetch delivery slots with parameters matching browser request
+  # Using family=classic-box-t25 and customerPriority=active_oneoff (critical for checkout flow)
   curl -s --max-time 8 -X GET \
-    "https://www-staging.hellofresh.com/gw/api/delivery_dates_options?zip=${ADDRESS_ZIP}&family=classic-box-t6&country=${MARKET}&locale=en-US&numDeliveries=20" \
+    "https://www-staging.hellofresh.com/gw/api/delivery_dates_options?country=${MARKET}&customerPriority=active_oneoff&family=classic-box-t25&locale=en-US&numDeliveries=20&zip=${ADDRESS_ZIP}" \
     -H "Authorization: Bearer ${ACCESS_TOKEN}" > "$DELIVERY_TMP" &
   DELIVERY_PID=$!
   
