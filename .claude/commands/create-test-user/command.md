@@ -700,9 +700,9 @@ get_test_address() {
       cat <<'EOF'
 {
   "line1": "123 Test Street",
-  "city": "New York",
+  "city": "Schenectady",
   "region": "NY",
-  "zip": "10001",
+  "zip": "12345",
   "country": "US"
 }
 EOF
