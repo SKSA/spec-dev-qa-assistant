@@ -365,6 +365,42 @@ else
   # Cleanup temp files
   rm -f "$CART_TMP" "$DELIVERY_TMP"
   
+  # DEBUG: Log delivery slots API response
+  echo ""
+  echo "🔍 DEBUG: Delivery Slots API Response"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "Query: country=US&customerPriority=active_oneoff&family=classic-box-t25&locale=en-US&numDeliveries=20&zip=${ADDRESS_ZIP}"
+  echo ""
+  
+  if [[ "$JSON_PARSER" == "jq" ]]; then
+    SLOT_COUNT=$(echo "$DELIVERY_RESPONSE" | jq -r '.items | length // 0')
+    echo "Total slots returned: $SLOT_COUNT"
+    
+    if [[ "$SLOT_COUNT" -gt 0 ]]; then
+      echo ""
+      echo "Slot details (first 5):"
+      echo "$DELIVERY_RESPONSE" | jq -r '.items[0:5][] | {
+        date: .deliveryDate.deliveryDate,
+        availableOnCheckout: .deliveryDate.deliveryOption.availableOnCheckout,
+        status: .deliveryDate.status,
+        handle: .deliveryDate.deliveryOption.handle,
+        day: .deliveryDate.deliveryOption.deliveryDay
+      }' 2>/dev/null || echo "  (Could not parse slot details)"
+    else
+      echo ""
+      echo "Raw response preview:"
+      echo "${DELIVERY_RESPONSE:0:500}"
+    fi
+  else
+    SLOT_COUNT=$(echo "$DELIVERY_RESPONSE" | python3 -c "import sys, json; print(len(json.load(sys.stdin).get('items', [])))" 2>/dev/null || echo "0")
+    echo "Total slots returned: $SLOT_COUNT"
+    echo ""
+    echo "Raw response preview:"
+    echo "${DELIVERY_RESPONSE:0:500}"
+  fi
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  
   # Parse cart ID
   CART_ID=""
   if [[ "$JSON_PARSER" == "jq" ]]; then
@@ -418,7 +454,9 @@ for item in data.get('items', []):
     
     if [[ -z "$DELIVERY_DATE" ]] || [[ "$DELIVERY_DATE" == "null" ]]; then
       echo "❌ No available delivery slots found"
+      echo "ℹ️  ZIP code queried: ${ADDRESS_ZIP}"
       echo "ℹ️  Staging may not have delivery slots configured for upcoming dates"
+      echo "ℹ️  Check Logistics Configurator: https://staging-operations.hellofresh.com"
       STATE="new"
       SUBSCRIPTION_ID=""
       PLAN_ID=""
