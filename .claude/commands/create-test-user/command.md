@@ -1,20 +1,17 @@
 ---
 name: /create-test-user
-argument-hint: '[--state new]'
-description: Create US test users in staging with auto-authentication
+argument-hint: '[--state active] [--plan 2-meals-2-people]'
+description: Create US test users with active subscriptions in staging
 mode: single-agent
 parameters:
   - name: state
-    description: "User subscription state: new (no subscription), active, cancelled, or paused"
+    description: "User subscription state: active, cancelled, or paused"
     required: false
-    default: "new"
+    default: "active"
   - name: plan
     description: "Subscription plan (e.g., 2-meals-2-people, 3-meals-4-people)"
     required: false
     default: "2-meals-2-people"
-  - name: loyalty_tier
-    description: "Loyalty tier (bronze, silver, gold, platinum)"
-    required: false
 dependencies:
   - curl (required)
   - jq or python3 (required for JSON parsing)
@@ -35,18 +32,21 @@ Create US test users in staging environment using direct backend API calls with 
 
 ## User States
 
-**`new` (Default - Recommended for Speed)** ⭐
-- Account only, no subscription
-- 100% success rate
-- Fast (~5-10 seconds)
-- Use for most E2E tests that don't require active subscriptions
+**All users created with active subscriptions by default.**
 
-**`active`, `cancelled`, `paused`** (With Subscription)
-- Creates subscription via checkout with official Braintree test nonces
-- Uses static sandbox tokens: `fake-valid-nonce` (Braintree), `test_` cards (Adyen), `card_test_` (ProcessOut)
-- Should work reliably in staging (uses official payment processor test values)
-- Slower (~20-30 seconds) due to full checkout flow
-- Use when tests specifically require active subscription state
+**`active` (Default)** ⭐
+- Creates user with active subscription
+- Uses official Braintree test nonces
+- Full checkout flow (~20-30 seconds)
+- Ready for immediate E2E testing
+
+**`cancelled`**
+- Creates subscription then cancels it
+- For testing cancellation flows and cancelled state
+
+**`paused`**
+- Creates subscription then pauses it (4 weeks)
+- For testing pause flows and paused state
 
 ## Usage
 
@@ -57,17 +57,14 @@ Run the command:
 ```
 
 **Optional Parameters:**
-- `--state`: Account type - default: `new` (no subscription)
-  - `new`: Account only (fastest, most reliable)
-  - `active`: With active subscription (requires payment)
-  - `cancelled`: With cancelled subscription
-  - `paused`: With paused subscription
+- `--state`: Subscription state - default: `active`
+  - `active`: Active subscription (default)
+  - `cancelled`: Creates then cancels subscription
+  - `paused`: Creates then pauses subscription
 - `--plan`: Subscription plan - default: 2-meals-2-people
 
 **Authentication:**
 Uses hardcoded staging credentials (`er+391+1@hf.com` / `qwerty123`) to automatically generate bearer tokens. No manual authentication required.
-- `--plan`: Subscription plan - default: 2-meals-2-people
-- `--token`: Use existing bearer token instead of username/password
 
 ## Setup
 
@@ -134,9 +131,8 @@ echo "✅ Bearer token ready"
 ### Step 1: Parse Input & Validate
 
 **Optional Arguments:**
-- `--state`: User state (new, active, cancelled, paused) - default: new
+- `--state`: User state (active, cancelled, paused) - default: active
 - `--plan=X-meals-Y-people`: Plan configuration (default: 2-meals-2-people)
-- `--loyalty-tier=basic|gold|platinum`: Enroll in loyalty program
 
 **Validation:**
 
@@ -145,9 +141,9 @@ echo "✅ Bearer token ready"
 MARKET="US"
 
 # Validate state
-if [[ ! "$STATE" =~ ^(new|active|cancelled|paused)$ ]]; then
+if [[ ! "$STATE" =~ ^(active|cancelled|paused)$ ]]; then
   echo "❌ Invalid state: $STATE"
-  echo "Valid states: new, active, cancelled, paused"
+  echo "Valid states: active, cancelled, paused"
   exit 1
 fi
 
@@ -267,7 +263,7 @@ fi
 echo "✅ User logged in successfully"
 ```
 
-### Step 4: Create Subscription (if needed)
+### Step 4: Create Subscription
 
 Uses cart + checkout flow (from JMeter working approach).
 
@@ -299,15 +295,8 @@ Cart metadata includes `"mealsPreset": "chefschoice"` which is:
 
 **Note:** Profile-service validates against shopping-platform-service. Using an invalid preset (like `"classic"`) will cause a 400 error.
 
-Skip if state is "new":
-
 ```bash
-if [[ "$STATE" == "new" ]]; then
-  echo "⏭️  Skipping subscription (state: new)"
-  SUBSCRIPTION_ID=""
-  PLAN_ID=""
-else
-  echo "📦 Step 2/4: Creating subscription..."
+echo "📦 Step 2/4: Creating subscription..."
   
   # Get SKU and address from config
   SKU=$(get_plan_sku "$MARKET" "$MEALS" "$PEOPLE")
@@ -601,7 +590,6 @@ for item in data.get('items', []):
         if [[ "$SUB_COUNT" -eq 0 ]]; then
           echo "⚠️  Checkout completed but subscription not found after 3s"
           echo "Checkout response: ${CHECKOUT_RESPONSE:0:300}"
-          STATE="new"
         fi
       fi
     fi
@@ -640,19 +628,6 @@ if [[ "$STATE" == "paused" ]] && [[ -n "$PLAN_ID" ]]; then
     -d "{\"weeks\":4}")
   
   echo "✅ Subscription paused"
-fi
-```
-
-**Enroll in loyalty:**
-
-```bash
-if [[ -n "$LOYALTY_TIER" ]]; then
-  echo "🎁 Enrolling in loyalty program (${LOYALTY_TIER} tier)..."
-  
-  # API call for loyalty enrollment (if available in market)
-  # Note: Not all markets support loyalty API
-  
-  echo "✅ Loyalty enrollment attempted"
 fi
 ```
 
@@ -1013,35 +988,29 @@ EOF
 
 ## Usage Examples
 
-### Example 1: Basic New User (No Subscription - Default)
+### Example 1: Basic Active User (Default)
 ```bash
 /create-test-user
 ```
-Creates US user account without subscription (fastest option).
-
-### Example 2: Active User with Subscription
-```bash
-/create-test-user --state active
-```
 Creates US user with active subscription (default 2-meals-2-people plan).
 
-### Example 3: Cancelled User with Custom Plan
+### Example 2: Active User with Custom Plan
+```bash
+/create-test-user --plan "3-meals-4-people"
+```
+Creates US user with 3 meals for 4 people subscription.
+
+### Example 3: Cancelled Subscription
 ```bash
 /create-test-user --state cancelled --plan "3-meals-4-people"
 ```
-Creates US user with 3 meals for 4 people, then cancels.
+Creates US user with 3 meals for 4 people, then cancels the subscription.
 
-### Example 4: Loyalty-Enrolled User
-```bash
-/create-test-user --state active --loyalty-tier "gold"
-```
-Creates active US user and attempts loyalty enrollment.
-
-### Example 5: Paused Subscription
+### Example 4: Paused Subscription
 ```bash
 /create-test-user --state paused
 ```
-Creates US user with paused subscription.
+Creates US user with paused subscription (4 weeks).
 
 ## Important Notes
 
@@ -1053,6 +1022,7 @@ Creates US user with paused subscription.
 6. **State Changes:** Cancel/pause operations are destructive
 7. **Access Tokens:** Tokens expire, use promptly for API testing
 8. **US Only:** Currently only supports US market
+9. **Always Creates Subscription:** All users created with active subscriptions by default
 
 ## Payment Test Values
 

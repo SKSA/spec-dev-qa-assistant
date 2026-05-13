@@ -1,85 +1,55 @@
-# Create Test User Command
+# Create Test User Plugin
 
 Create test users in the HelloFresh staging environment with automatic authentication and subscription management.
 
 ## Overview
 
-This command provides the `/create-test-user` skill that creates test user accounts with optional subscriptions for E2E testing. Currently supports US market only.
+This plugin provides the `/create-test-user` command that creates test user accounts with optional subscriptions for E2E testing. Currently supports US market only.
 
 ## Features
 
 - **Auto-Authentication**: Uses hardcoded staging credentials to generate bearer tokens
-- **Multiple User States**: Create users in new, active, cancelled, or paused states
-- **Subscription Management**: Optional subscription creation with configurable plans
-- **Loyalty Enrollment**: Optional loyalty program enrollment
-- **Fast Execution**: New users created in ~5-10 seconds, subscriptions in ~20-30 seconds
+- **Subscription Creation**: Always creates users with active subscriptions
+- **Multiple States**: Support for active, cancelled, or paused subscription states
+- **Fast Execution**: ~20-30 seconds per user with full subscription setup
+- **Debug Logging**: Comprehensive delivery slot API debugging
+
+## Installation
+
+```bash
+claude plugin install hellofresh/claude-plugins-marketplace/external_plugins/create-test-user
+```
 
 ## Usage
 
 ```bash
-# Create new user (no subscription - fastest)
+# Create user with active subscription (default)
 /create-test-user
 
-# Create user with active subscription
-/create-test-user --state active
+# Create with custom plan
+/create-test-user --plan 3-meals-4-people
 
-# Create cancelled user with custom plan
-/create-test-user --state cancelled --plan 3-meals-4-people
+# Create and cancel subscription
+/create-test-user --state cancelled
 
-# Create user with loyalty enrollment
-/create-test-user --state active --loyalty-tier gold
+# Create and pause subscription
+/create-test-user --state paused
 ```
-
-## Workflow
-
-1. **Validation**: Validates input parameters (state, plan, loyalty tier)
-2. **Authentication**: Generates bearer token from staging credentials
-3. **User Creation**: Creates user account with unique email
-4. **Subscription Setup** (optional): Creates cart, completes checkout, manages state
-5. **Output**: Displays user credentials and subscription details
-
-## Module Structure
-
-The skill is organized into composable modules:
-
-### Validation Modules
-- `validation/input-validator.md` - Validate user input parameters
-
-### Authentication Modules
-- `auth/token-generator.md` - Generate bearer tokens from credentials
-
-### User Management Modules
-- `user/account-creator.md` - Create user accounts
-- `user/credential-generator.md` - Generate unique credentials
-
-### Subscription Modules
-- `subscription/subscription-manager.md` - Manage subscription lifecycle
-- `subscription/payment-handler.md` - Handle test payments
-- `subscription/state-manager.md` - Handle state transitions
-
-### Output Modules
-- `output/result-formatter.md` - Format and display results
 
 ## User States
 
-### `new` (Default - Recommended) ⭐
-- Account only, no subscription
-- 100% success rate
-- Fast (~5-10 seconds)
-- Use for most E2E tests that don't require subscriptions
-
-### `active`
-- Creates subscription with active state
-- Uses test payment methods
-- Slower (~20-30 seconds)
-- Use when tests require active subscriptions
+### `active` (Default) ⭐
+- Creates user with active subscription
+- Full checkout flow
+- ~20-30 seconds
+- Ready for immediate testing
 
 ### `cancelled`
 - Creates subscription then cancels it
 - For testing cancellation flows
 
 ### `paused`
-- Creates subscription then pauses it
+- Creates subscription then pauses it (4 weeks)
 - For testing pause flows
 
 ## Output
@@ -99,6 +69,38 @@ The skill is organized into composable modules:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
+## Module Structure
+
+The command is organized into composable modules:
+
+### Detection & Validation
+- `validation/input-validator.md` - Validate user input parameters
+
+### Authentication
+- `auth/token-generator.md` - Generate bearer tokens from staging credentials
+
+### User Management
+- `user/account-creator.md` - Create user accounts with retry logic
+- `user/credential-generator.md` - Generate unique credentials
+
+### Subscription Management
+- `subscription/subscription-manager.md` - Manage subscription lifecycle
+- `subscription/payment-handler.md` - Handle test payment methods
+- `subscription/state-manager.md` - Handle state transitions
+
+### Configuration
+- `config/plans.md` - Plan SKU configuration
+- `config/addresses.md` - Test address configuration
+- `config/markets.md` - Market configuration
+
+### Output
+- `output/result-formatter.md` - Format and display results
+
+### API Reference
+- `api/signup.md` - User signup endpoint
+- `api/subscription.md` - Subscription endpoints
+- `api/state-management.md` - State management endpoints
+
 ## Dependencies
 
 - **curl**: HTTP requests to staging APIs
@@ -116,42 +118,28 @@ Uses hardcoded credentials for auto-authentication:
 Uses official Braintree sandbox test nonce:
 - Nonce: `fake-valid-nonce`
 - No real money charged
-- Always succeeds in sandbox
 
 ## Important Notes
 
 1. **VPN Required**: Must be connected to staging VPN
 2. **US Only**: Currently only supports US market
-3. **Unique Emails**: Uses timestamp to ensure unique emails
-4. **Test Payments**: Uses official Braintree test nonces (never charges real money)
-5. **State Changes**: Cancel/pause operations are destructive
+3. **Unique Emails**: Uses timestamp to ensure unique emails (format: `hfuser-DD-HHMMSS@hf.com`)
+4. **Test Payments**: Uses official Braintree test nonces
+5. **Always Creates Subscriptions**: All users are created with active subscriptions by default
 
-## Error Handling
+## Troubleshooting
 
-### Common Errors
+### No Delivery Slots Available
+If subscription creation fails due to "no delivery slots available", this is a staging Logistics Configurator limitation. The debug logs will show which ZIP code was queried and what slots were returned.
 
-**VPN Not Connected**
-```
-❌ VPN not connected or staging gateway unreachable
-→ Connect to staging VPN and try again
-```
+### VPN Connection
+Ensure you're connected to the HelloFresh staging VPN before running the command.
 
-**Authentication Failed**
-```
-❌ Failed to authenticate with staging credentials
-→ Check VPN connection and verify credentials
-```
+## Author
 
-**API Error**
-```
-❌ Failed to create user account
-→ Check API response for details
-```
-
-## Related Commands
-
-- `/generate-e2e-tests` - Generate tests that can use created users
-- `/verify-ac` - Verify acceptance criteria using test users
+**Squad**: Share  
+**Tribe**: Loyalty and Virality  
+**Email**: sharesquad@hellofresh.com
 
 ## References
 

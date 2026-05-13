@@ -1,7 +1,7 @@
 ---
 name: create-test-user
-description: Create US test users in staging environment with auto-authentication
-argument-hint: '[--state new] [--plan 2-meals-2-people] [--loyalty-tier gold]'
+description: Create US test users with active subscriptions in staging
+argument-hint: '[--state active] [--plan 2-meals-2-people]'
 ---
 
 # Create Test User - EXECUTABLE SKILL
@@ -18,17 +18,17 @@ This SKILL.md acts as an orchestrator that:
 ## Usage
 
 ```bash
-# Create new user (no subscription - fastest)
+# Create user with active subscription (default)
 /create-test-user
 
-# Create user with active subscription
-/create-test-user --state active
+# Create with custom plan
+/create-test-user --plan 3-meals-4-people
 
-# Create cancelled user with custom plan
-/create-test-user --state cancelled --plan 3-meals-4-people
+# Create and cancel subscription
+/create-test-user --state cancelled
 
-# Create user with loyalty enrollment
-/create-test-user --state active --loyalty-tier gold
+# Create and pause subscription
+/create-test-user --state paused
 ```
 
 ## Execution Strategy
