@@ -65,6 +65,7 @@ That's it! 🎉
 | `/generate-xray-tests` | Generate X-Ray test cases directly from JIRA ticket acceptance criteria |
 | `/document-tests` | Generate interactive HTML test coverage dashboard with visual gap analysis |
 | `/dev-risk-analysis` | Analyze developer quality metrics and risk scores by squad or JIRA project |
+| `/pr-review` | Deep PR code review with Conventional Comments and 2-why hard gate discipline |
 | `/verify-ac` | Interactively verify each acceptance criterion |
 | `/post-to-jira` | Post verification results to JIRA ticket (auto-prompted after verify) |
 | `/figma-ac-extractor` | Extract user flow ACs from Figma designs |
@@ -250,6 +251,7 @@ Automate X-Ray test creation:
 - `generate-xray-tests/` - X-Ray test case generation from JIRA ACs
 - `document-tests/` - Interactive test coverage dashboard
 - `dev-risk-analysis/` - Developer risk analysis and quality metrics
+- `pr-review/` - Deep PR code review with Conventional Comments
 - `post-to-jira/` - JIRA integration
 - `figma-ac-extractor/` - Figma integration
 - `ac-quality-trends/` - Quality metrics
